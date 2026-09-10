@@ -227,6 +227,7 @@
         thead {
             position: sticky;
             top: 0;
+            z-index: 20;
         }
 
         th {
@@ -236,11 +237,22 @@
             font-weight: 500;
             background: var(--surface-1);
             border-bottom: 0.5px solid var(--border);
+            z-index: 20;
         }
 
         td {
             padding: 10px;
             border-bottom: 0.5px solid var(--border);
+        }
+
+        /* 후보자 평가 표: 열마다 세로 구분선 */
+        .candidates-table th,
+        .candidates-table td {
+            border-right: 0.5px solid var(--border);
+        }
+        .candidates-table th:last-child,
+        .candidates-table td:last-child {
+            border-right: none;
         }
 
         tr:hover {
@@ -263,38 +275,6 @@
             color: var(--text-primary);
         }
 
-        .candidates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .candidate-card {
-            background: var(--surface-2);
-            border: 0.5px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .candidate-card input {
-            width: 100%;
-        }
-
-        .candidate-card-buttons {
-            display: flex;
-            gap: 6px;
-        }
-
-        .candidate-card-buttons button {
-            flex: 1;
-            padding: 6px 8px;
-            font-size: 12px;
-            justify-content: center;
-        }
-
         .candidates-table .table-container {
             max-height: 600px;
         }
@@ -308,6 +288,26 @@
             width: 100%;
             font-size: 11px !important;
             padding: 4px 6px !important;
+        }
+
+        .cand-head-input {
+            width: 100%;
+            font-size: 12px;
+            padding: 5px 7px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: var(--surface-1);
+            color: var(--text-primary);
+            box-sizing: border-box;
+        }
+        .cand-head-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+            font-weight: 400;
+        }
+        .cand-head-input:focus {
+            outline: none;
+            border-color: var(--fill-accent);
         }
 
         .score-group {
@@ -364,6 +364,12 @@
             left: 0;
             background: var(--surface-1);
             min-width: 120px;
+            z-index: 10;
+        }
+
+        /* 좌상단 모서리(고정열 ∩ 고정헤더)는 가장 위 */
+        thead .sticky-col {
+            z-index: 30;
         }
 
         #fileInput {
@@ -432,15 +438,6 @@
         </div>
         <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileUpload(event)">
 
-        <!-- 후보자 관리 -->
-        <div class="section">
-            <div class="section-header">
-                <h2>후보자 관리</h2>
-                <button onclick="addCandidate()">➕ 후보자 추가</button>
-            </div>
-            <div class="candidates-grid" id="candidatesGrid"></div>
-        </div>
-
         <!-- 평가 항목 관리 -->
         <div class="section">
             <div class="section-header">
@@ -470,23 +467,22 @@
 
         <!-- 후보자 평가 -->
         <div class="section candidates-table">
-            <h2>후보자 평가</h2>
+            <div class="section-header">
+                <h2>후보자 평가</h2>
+                <button onclick="addCandidate()">➕ 후보자 추가</button>
+            </div>
             <div class="table-wrapper">
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
+                            <tr id="candHeaderRow">
                                 <th class="sticky-col">평가 항목</th>
-                                <th id="candTableHeaders"></th>
                             </tr>
                         </thead>
                         <tbody id="candidateTable"></tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- 종합점수 요약 -->
-            <div class="summary-cards" id="summaryCards"></div>
         </div>
     </div>
 
@@ -591,8 +587,13 @@
         function addCandidate() {
             const set = getCurrentSet();
             const newCandidate = { 
-                name: '새 후보자', 
-                company: '회사명', 
+                name: '', 
+                gender: '', 
+                age: '', 
+                company: '', 
+                years: '', 
+                salary: '', 
+                desiredSalary: '', 
                 scores: Array(set.items.length).fill(0), 
                 comments: Array(set.items.length).fill('') 
             };
@@ -746,31 +747,6 @@
             };
         }
 
-        function renderCandidates() {
-            const set = getCurrentSet();
-            const grid = document.getElementById('candidatesGrid');
-            grid.innerHTML = '';
-            
-            set.candidates.forEach((cand, idx) => {
-                const card = document.createElement('div');
-                card.className = 'candidate-card';
-                card.innerHTML = `
-                    <div>
-                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">이름</label>
-                        <input type="text" value="${cand.name}" onchange="getCurrentSet().candidates[${idx}].name = this.value; renderAll();">
-                    </div>
-                    <div>
-                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">회사</label>
-                        <input type="text" value="${cand.company}" onchange="getCurrentSet().candidates[${idx}].company = this.value; renderAll();">
-                    </div>
-                    <div class="candidate-card-buttons">
-                        <button onclick="removeCandidate(${idx})" style="padding: 6px 8px; justify-content: center;">🗑️ 삭제</button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
         function renderItems() {
             const set = getCurrentSet();
             const tbody = document.getElementById('itemsTable');
@@ -820,17 +796,42 @@
         function renderCandidateTable() {
             const set = getCurrentSet();
             
-            // 테이블 헤더
-            const headerCell = document.getElementById('candTableHeaders');
-            let headerHtml = '';
-            set.candidates.forEach((cand) => {
-                headerHtml += `<th style="min-width: 100px; text-align: center;"><div style="font-weight: 500; font-size: 13px;">${cand.name}</div><div style="font-size: 11px; color: var(--text-secondary);">${cand.company}</div></th>`;
+            // 테이블 헤더 (후보자마다 별도 열: 이름·이전소속·연차·연봉·삭제)
+            const headerRow = document.getElementById('candHeaderRow');
+            headerRow.innerHTML = '<th class="sticky-col">평가 항목</th>';
+            set.candidates.forEach((cand, idx) => {
+                headerRow.insertAdjacentHTML('beforeend', `
+                    <th style="min-width: 190px; vertical-align: top; padding: 8px;">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex; gap: 4px;">
+                                <input type="text" class="cand-head-input" value="${cand.name}" placeholder="이름" onchange="getCurrentSet().candidates[${idx}].name = this.value; renderCandidateTable(); saveState();" style="flex: 1; min-width: 0; font-weight: 600;">
+                                <select class="cand-head-input" onchange="getCurrentSet().candidates[${idx}].gender = this.value; saveState();" style="width: 54px; padding: 5px 2px;">
+                                    <option value="" ${!cand.gender ? 'selected' : ''}>성별</option>
+                                    <option value="남" ${cand.gender === '남' ? 'selected' : ''}>남</option>
+                                    <option value="여" ${cand.gender === '여' ? 'selected' : ''}>여</option>
+                                </select>
+                                <input type="number" class="cand-head-input" value="${cand.age || ''}" placeholder="나이" min="0" onchange="getCurrentSet().candidates[${idx}].age = this.value; saveState();" style="width: 52px; padding: 5px 4px;">
+                            </div>
+                            <input type="text" class="cand-head-input" value="${cand.company}" placeholder="이전 소속 회사" onchange="getCurrentSet().candidates[${idx}].company = this.value; saveState();">
+                            <input type="text" class="cand-head-input" value="${cand.years}" placeholder="현재 연차 (예: 5년차)" onchange="getCurrentSet().candidates[${idx}].years = this.value; saveState();">
+                            <input type="text" class="cand-head-input" value="${cand.salary}" placeholder="현재 연봉 (예: 5,000만)" onchange="getCurrentSet().candidates[${idx}].salary = this.value; saveState();">
+                            <input type="text" class="cand-head-input" value="${cand.desiredSalary || ''}" placeholder="희망 연봉 (예: 6,000만)" onchange="getCurrentSet().candidates[${idx}].desiredSalary = this.value; saveState();">
+                            <button onclick="removeCandidate(${idx})" style="padding: 4px 6px; justify-content: center; font-size: 12px;">🗑️ 삭제</button>
+                        </div>
+                    </th>
+                `);
             });
-            headerCell.innerHTML = headerHtml;
 
             // 평가 테이블
             const tbody = document.getElementById('candidateTable');
             tbody.innerHTML = '';
+
+            // 후보자가 없을 때 안내
+            if (set.candidates.length === 0) {
+                tbody.innerHTML = `<tr><td class="sticky-col" style="font-weight: 500; font-size: 12px;">—</td><td style="padding: 24px; color: var(--text-secondary); font-size: 13px;">우측 상단 <strong>➕ 후보자 추가</strong> 버튼으로 평가할 후보자를 추가하세요.</td></tr>`;
+                return;
+            }
+
             set.items.forEach((item, itemIdx) => {
                 const row = document.createElement('tr');
                 let html = `<td class="sticky-col" style="font-weight: 500; font-size: 12px;">${item.name}</td>`;
@@ -854,49 +855,77 @@
                 tbody.appendChild(row);
             });
 
-            // 종합점수 카드
-            const summary = document.getElementById('summaryCards');
-            summary.innerHTML = '';
+            // 종합점수 행 (표 맨 아래, 각 후보자 열 밑에 정렬)
+            const totalRow = document.createElement('tr');
+            let totalHtml = `<td class="sticky-col" style="font-weight: 700; font-size: 13px; background: var(--surface-1);">종합점수</td>`;
             set.candidates.forEach((cand, idx) => {
                 const score = calculateScore(idx);
-                const card = document.createElement('div');
-                card.className = 'summary-card';
-                card.innerHTML = `
-                    <div class="summary-card-name">${cand.name}</div>
-                    <div class="summary-card-score">${score}</div>
-                    <div class="summary-card-max">/ 5.0</div>
+                totalHtml += `
+                    <td style="text-align: center; background: var(--surface-1); border-top: 1.5px solid var(--border);">
+                        <div style="font-weight: 700; font-size: 18px; color: var(--fill-accent);">${score}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary);">/ 5.0</div>
+                    </td>
                 `;
-                summary.appendChild(card);
             });
+            totalRow.innerHTML = totalHtml;
+            tbody.appendChild(totalRow);
         }
 
         function downloadExcel() {
             const wb = XLSX.utils.book_new();
             
             evaluationSets.forEach((set, setIdx) => {
-                const headers = ['평가항목', '세부사항', '비중', '코멘트', ...set.candidates.map(c => c.name), ...set.candidates.map(c => `${c.name}_코멘트`)];
-                const data = set.items.map((item, itemIdx) => {
-                    const row = [item.name, item.detail, item.weight, item.comment];
-                    set.candidates.forEach(cand => row.push(cand.scores[itemIdx]));
-                    set.candidates.forEach(cand => row.push(cand.comments[itemIdx]));
+                // 헤더: 평가항목 | 세부사항 | 비중 | (후보자별 점수, 코멘트)
+                const headers = ['평가항목', '세부사항', '비중'];
+                set.candidates.forEach(c => { headers.push(c.name || '(이름없음)', '코멘트'); });
+
+                // 후보자 메타 행 (이전 소속 / 현재 연차 / 현재 연봉)
+                const metaRow = (label, key) => {
+                    const r = [label, '', ''];
+                    set.candidates.forEach(c => { r.push(c[key] || '', ''); });
+                    return r;
+                };
+                const genderRow = metaRow('성별', 'gender');
+                const ageRow = metaRow('나이', 'age');
+                const companyRow = metaRow('이전 소속 회사', 'company');
+                const yearsRow = metaRow('현재 연차', 'years');
+                const salaryRow = metaRow('현재 연봉', 'salary');
+                const desiredSalaryRow = metaRow('희망 연봉', 'desiredSalary');
+
+                // 항목별 점수 행
+                const itemRows = set.items.map((item, itemIdx) => {
+                    const row = [item.name, item.detail, (item.weight * 100).toFixed(0) + '%'];
+                    set.candidates.forEach(cand => {
+                        row.push(cand.scores[itemIdx], cand.comments[itemIdx] || '');
+                    });
                     return row;
                 });
-                
+
                 // 종합점수 행
-                const summaryRow = ['종합점수', '', '', ''];
-                set.candidates.forEach((cand, idx) => summaryRow.push(calculateScore(idx)));
-                summaryRow.push(...Array(set.candidates.length).fill(''));
-                data.push(summaryRow);
-                
-                const sheetName = set.name.substring(0, 31);
+                const summaryRow = ['종합점수', '', ''];
+                set.candidates.forEach((cand, idx) => { summaryRow.push(calculateScore(idx), ''); });
+
                 const title = `${set.name}${set.evaluatorName ? ' - ' + set.evaluatorName : ''}${set.evaluationDate ? ' (' + set.evaluationDate + ')' : ''}`;
                 const ws = XLSX.utils.aoa_to_sheet([
                     [title],
                     [],
                     headers,
-                    ...data
+                    genderRow,
+                    ageRow,
+                    companyRow,
+                    yearsRow,
+                    salaryRow,
+                    desiredSalaryRow,
+                    [],
+                    ...itemRows,
+                    summaryRow
                 ]);
-                ws['!cols'] = [{wch: 15}, {wch: 20}, {wch: 8}, {wch: 15}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 15}, {wch: 15}, {wch: 15}];
+
+                const cols = [{wch: 16}, {wch: 24}, {wch: 8}];
+                set.candidates.forEach(() => { cols.push({wch: 10}, {wch: 18}); });
+                ws['!cols'] = cols;
+
+                const sheetName = (set.name || `평가${setIdx + 1}`).substring(0, 31);
                 XLSX.utils.book_append_sheet(wb, ws, sheetName);
             });
             
@@ -957,7 +986,6 @@
         function renderAll() {
             renderSetTabs();
             renderMetadata();
-            renderCandidates();
             renderItems();
             renderCandidateTable();
             saveState();
