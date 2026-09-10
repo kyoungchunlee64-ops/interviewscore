@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평가 관리 시스템</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --surface-0: #f5f5f5;
+            --surface-1: #efefef;
+            --surface-2: #ffffff;
+            --text-primary: #0b0b0b;
+            --text-secondary: #52514e;
+            --text-muted: #898781;
+            --border: rgba(11, 11, 11, 0.1);
+            --fill-accent: #2a78d6;
+            --on-accent: #ffffff;
+            --radius: 8px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --surface-0: #1a1a19;
+                --surface-1: #2c2c2a;
+                --surface-2: #1a1a19;
+                --text-primary: #f0efec;
+                --text-secondary: #c3c2b7;
+                --text-muted: #898781;
+                --border: rgba(255, 255, 255, 0.1);
+                --fill-accent: #3987e5;
+                --on-accent: #0b0b0b;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--surface-0);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 500;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        h2 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 2rem;
+            border-bottom: 0.5px solid var(--border);
+            overflow-x: auto;
+            padding-bottom: 12px;
+        }
+
+        .tab {
+            padding: 6px 12px;
+            background: var(--surface-1);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            cursor: grab;
+            white-space: nowrap;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .tab:active {
+            cursor: grabbing;
+        }
+
+        .tab.active {
+            background: var(--fill-accent);
+            color: var(--on-accent);
+        }
+
+        .tab:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .tab.drag-over {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .tab .delete-btn {
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .tab .delete-btn:hover {
+            opacity: 1;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 2rem;
+            background: var(--surface-1);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 0.5px solid var(--border);
+        }
+
+        .metadata-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metadata-field label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        select {
+            padding: 8px 10px;
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            color: var(--text-primary);
+            background: var(--surface-2);
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--fill-accent);
+        }
+
+        button {
+            padding: 8px 12px;
+            background: var(--surface-1);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            border-color: var(--text-secondary);
+            background: var(--surface-2);
+        }
+
+        button.primary {
+            background: var(--fill-accent);
+            color: var(--on-accent);
+            border-color: var(--fill-accent);
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .table-wrapper {
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: var(--surface-2);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            padding: 10px;
+            text-align: left;
+            color: var(--text-primary);
+            font-weight: 500;
+            background: var(--surface-1);
+            border-bottom: 0.5px solid var(--border);
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 0.5px solid var(--border);
+        }
+
+        tr:hover {
+            background: var(--surface-1);
+        }
+
+        .total-weight {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: var(--surface-1);
+            border-radius: var(--radius);
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .total-weight span:last-child {
+            color: var(--text-primary);
+        }
+
+        .candidates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .candidate-card {
+            background: var(--surface-2);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .candidate-card input {
+            width: 100%;
+        }
+
+        .candidate-card-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .candidate-card-buttons button {
+            flex: 1;
+            padding: 6px 8px;
+            font-size: 12px;
+            justify-content: center;
+        }
+
+        .candidates-table .table-container {
+            max-height: 600px;
+        }
+
+        .score-input {
+            width: 100%;
+            min-width: 80px;
+        }
+
+        .comment-input {
+            width: 100%;
+            font-size: 11px !important;
+            padding: 4px 6px !important;
+        }
+
+        .score-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .summary-cards {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .summary-card {
+            background: var(--surface-1);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            text-align: center;
+        }
+
+        .summary-card-name {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .summary-card-score {
+            font-size: 28px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .summary-card-max {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: var(--surface-1);
+            min-width: 120px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .metadata-grid .button-group {
+            grid-column: 4;
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+        .metadata-grid .button-group button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        @media (max-width: 1024px) {
+            .metadata-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .metadata-grid .button-group {
+                grid-column: 1 / -1;
+                flex-direction: row;
+            }
+
+            .metadata-grid .button-group button {
+                width: auto;
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>평가 관리 시스템</h1>
+
+        <!-- 평가 세트 탭 (드래그 가능) -->
+        <div class="tabs" id="setTabs"></div>
+
+        <!-- 메타데이터 정보 -->
+        <div class="metadata-grid">
+            <div class="metadata-field">
+                <label>평가자명</label>
+                <input type="text" id="evaluatorName" placeholder="평가자 이름">
+            </div>
+            <div class="metadata-field">
+                <label>평가일</label>
+                <input type="date" id="evaluationDate">
+            </div>
+            <div class="metadata-field">
+                <label>부서 선택</label>
+                <select id="departmentSelect">
+                    <option value="planning">플래닝본부 - AP경력직 대리급</option>
+                    <option value="advertising">광고사업본부 - AE경력직</option>
+                    <option value="production">제작본부 - 크리에이티브</option>
+                    <option value="custom">커스텀 템플릿</option>
+                </select>
+            </div>
+            <div class="button-group">
+                <button onclick="document.getElementById('fileInput').click()">📥 엑셀 로드</button>
+                <button onclick="downloadExcel()" class="primary">💾 엑셀 저장</button>
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileUpload(event)">
+
+        <!-- 후보자 관리 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>후보자 관리</h2>
+                <button onclick="addCandidate()">➕ 후보자 추가</button>
+            </div>
+            <div class="candidates-grid" id="candidatesGrid"></div>
+        </div>
+
+        <!-- 평가 항목 관리 -->
+        <div class="section">
+            <div class="section-header">
+                <h2>평가 항목 관리</h2>
+                <button onclick="addItem()">➕ 항목 추가</button>
+            </div>
+            <div class="table-wrapper">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="min-width: 120px;">평가 항목명</th>
+                                <th style="min-width: 180px;">세부 평가 사항</th>
+                                <th style="width: 60px; text-align: center;">비중</th>
+                                <th style="width: 40px; text-align: center;">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="total-weight">
+                <span>비중 합계</span>
+                <span id="totalWeight">1.00</span>
+            </div>
+        </div>
+
+        <!-- 후보자 평가 -->
+        <div class="section candidates-table">
+            <h2>후보자 평가</h2>
+            <div class="table-wrapper">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="sticky-col">평가 항목</th>
+                                <th id="candTableHeaders"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidateTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 종합점수 요약 -->
+            <div class="summary-cards" id="summaryCards"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        const templates = {
+            planning: {
+                name: '플래닝본부 - AP경력직 대리급',
+                items: [
+                    { name: '① 직무 전문 역량', detail: '제안 문서 작성 스킬·문제 해결 도출·퍼포먼스 이해도·AI 실무 활용도', weight: 0.25 },
+                    { name: '② 전략적 사고력', detail: '문제 해결 경험·논리 구조화·인사이트 도출 경험 등', weight: 0.25 },
+                    { name: '③ 실무 적응력', detail: '프로젝트 오너십 기반 즉시 실무 투입 역량 보유', weight: 0.2 },
+                    { name: '④ 협업력', detail: '프로젝트 내 역할·기여도 비중·성과 창출 과정·커뮤니케이션 유연성', weight: 0.15 },
+                    { name: '⑤ 조직 적합성', detail: '사내 적응 및 해당 팀과의 업무적 캐미스트리', weight: 0.15 }
+                ],
+                candidates: []
+            },
+            advertising: {
+                name: '광고사업본부 - AE경력직',
+                items: [
+                    { name: '① 클라이언트 매니지먼트', detail: '클라이언트 관계 구축·이슈 대응·만족도 관리', weight: 0.25 },
+                    { name: '② 캠페인 실행력', detail: '전략 수립·크리에이티브 완성도·성과 달성도', weight: 0.3 },
+                    { name: '③ 협업 및 커뮤니케이션', detail: '팀 내 협업·제작팀과의 협력·내부 보고', weight: 0.2 },
+                    { name: '④ 업계 이해도', detail: '시장 트렌드 파악·경쟁사 분석·전문성', weight: 0.15 },
+                    { name: '⑤ 성장 가능성', detail: '학습 능력·새로운 기술 이해·미래 리더십', weight: 0.1 }
+                ],
+                candidates: []
+            },
+            production: {
+                name: '제작본부 - 크리에이티브',
+                items: [
+                    { name: '① 크리에이티브 감각', detail: '디자인/영상 완성도·트렌드 감지·차별성', weight: 0.3 },
+                    { name: '② 기술 역량', detail: 'Tool 숙련도·제작 프로세스 이해·퀄리티 관리', weight: 0.25 },
+                    { name: '③ 협업 능력', detail: '팀 커뮤니케이션·타팀 요청사항 대응·아이디어 피드백', weight: 0.2 },
+                    { name: '④ 업무 효율성', detail: '시간 관리·마감 준수·자조직화', weight: 0.15 },
+                    { name: '⑤ 포트폴리오 퀄리티', detail: '제출 포트폴리오 완성도·사례 다양성·설명력', weight: 0.1 }
+                ],
+                candidates: []
+            },
+            custom: {
+                name: '커스텀 템플릿',
+                items: [
+                    { name: '평가 항목 1', detail: '세부 평가 사항을 입력하세요', weight: 0.2 },
+                    { name: '평가 항목 2', detail: '세부 평가 사항을 입력하세요', weight: 0.2 },
+                    { name: '평가 항목 3', detail: '세부 평가 사항을 입력하세요', weight: 0.2 },
+                    { name: '평가 항목 4', detail: '세부 평가 사항을 입력하세요', weight: 0.2 },
+                    { name: '평가 항목 5', detail: '세부 평가 사항을 입력하세요', weight: 0.2 }
+                ],
+                candidates: []
+            }
+        };
+
+        let evaluationSets = [];
+        let currentSetIndex = 0;
+        let draggedTabIndex = null;
+
+        function initializeSet(template) {
+            return {
+                name: `평가 세트 ${evaluationSets.length + 1}`,
+                template: template,
+                evaluatorName: '',
+                evaluationDate: new Date().toISOString().split('T')[0],
+                department: 'planning',
+                items: JSON.parse(JSON.stringify(templates[template].items)),
+                candidates: JSON.parse(JSON.stringify(templates[template].candidates))
+            };
+        }
+
+        function addEvaluationSet() {
+            evaluationSets.push(initializeSet('planning'));
+            currentSetIndex = evaluationSets.length - 1;
+            renderAll();
+        }
+
+        function removeEvaluationSet(idx) {
+            if (evaluationSets.length > 1) {
+                evaluationSets.splice(idx, 1);
+                if (currentSetIndex >= evaluationSets.length) currentSetIndex = evaluationSets.length - 1;
+                renderAll();
+            }
+        }
+
+        function getCurrentSet() {
+            return evaluationSets[currentSetIndex];
+        }
+
+        function updateCurrentSet(key, value) {
+            getCurrentSet()[key] = value;
+            saveState();
+        }
+
+        function changeTemplate(template) {
+            const current = getCurrentSet();
+            const newTemplate = templates[template];
+            current.department = template;
+            current.items = JSON.parse(JSON.stringify(newTemplate.items));
+            current.candidates = JSON.parse(JSON.stringify(newTemplate.candidates));
+            renderAll();
+        }
+
+        function addCandidate() {
+            const set = getCurrentSet();
+            const newCandidate = { 
+                name: '새 후보자', 
+                company: '회사명', 
+                scores: Array(set.items.length).fill(0), 
+                comments: Array(set.items.length).fill('') 
+            };
+            set.candidates.push(newCandidate);
+            renderAll();
+        }
+
+        function removeCandidate(idx) {
+            const set = getCurrentSet();
+            set.candidates.splice(idx, 1);
+            renderAll();
+        }
+
+        function addItem() {
+            const set = getCurrentSet();
+            set.items.push({ name: '새 항목', detail: '세부 사항을 입력하세요', weight: 0.05 });
+            set.candidates.forEach(c => { c.scores.push(0); c.comments.push(''); });
+            renderAll();
+        }
+
+        function deleteItem(idx) {
+            const set = getCurrentSet();
+            set.items.splice(idx, 1);
+            set.candidates.forEach(c => { c.scores.splice(idx, 1); c.comments.splice(idx, 1); });
+            renderAll();
+        }
+
+        function renderSetTabs() {
+            const container = document.getElementById('setTabs');
+            container.innerHTML = '';
+            evaluationSets.forEach((set, idx) => {
+                const tab = document.createElement('button');
+                tab.className = 'tab' + (idx === currentSetIndex ? ' active' : '');
+                tab.draggable = true;
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'tab-name';
+                nameSpan.textContent = set.name;
+                
+                const deleteBtn = document.createElement('span');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = '✕';
+                deleteBtn.onclick = (e) => { e.stopPropagation(); removeEvaluationSet(idx); };
+                
+                tab.appendChild(nameSpan);
+                tab.appendChild(deleteBtn);
+                
+                // 인라인 이름 수정 함수
+                const startEditing = () => {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = set.name;
+                    input.style.cssText = 'padding: 2px 4px; border: 1px solid var(--fill-accent); border-radius: 3px; font-size: 13px; width: 120px; background: var(--surface-2); color: var(--text-primary);';
+                    
+                    nameSpan.replaceWith(input);
+                    input.focus();
+                    input.select();
+                    
+                    let done = false;
+                    const finishEdit = () => {
+                        if (done) return;
+                        done = true;
+                        set.name = input.value.trim() || set.name;
+                        renderSetTabs();
+                        renderMetadata();
+                    };
+                    
+                    input.onblur = finishEdit;
+                    input.onkeydown = (ev) => {
+                        if (ev.key === 'Enter') { ev.preventDefault(); finishEdit(); }
+                        if (ev.key === 'Escape') { done = true; renderSetTabs(); }
+                    };
+                };
+                
+                // 단일 클릭(탭 전환)과 더블클릭(이름 수정) 충돌 방지
+                tab.onclick = (e) => {
+                    if (e.target.className === 'delete-btn' || e.target.tagName === 'INPUT') return;
+                    if (tab._clickTimer) return; // 더블클릭 진행 중이면 무시
+                    tab._clickTimer = setTimeout(() => {
+                        tab._clickTimer = null;
+                        currentSetIndex = idx;
+                        renderAll();
+                    }, 250);
+                };
+                
+                tab.ondblclick = (e) => {
+                    e.stopPropagation();
+                    if (tab._clickTimer) { clearTimeout(tab._clickTimer); tab._clickTimer = null; }
+                    if (e.target.className === 'delete-btn') return;
+                    startEditing();
+                };
+                
+                // 드래그 이벤트
+                tab.addEventListener('dragstart', (e) => {
+                    draggedTabIndex = idx;
+                    tab.style.opacity = '0.5';
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                
+                tab.addEventListener('dragend', (e) => {
+                    tab.style.opacity = '1';
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
+                    draggedTabIndex = null;
+                });
+                
+                tab.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (draggedTabIndex !== null && draggedTabIndex !== idx) {
+                        tab.classList.add('drag-over');
+                    }
+                });
+                
+                tab.addEventListener('dragleave', (e) => {
+                    tab.classList.remove('drag-over');
+                });
+                
+                tab.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (draggedTabIndex !== null && draggedTabIndex !== idx) {
+                        const temp = evaluationSets[draggedTabIndex];
+                        evaluationSets[draggedTabIndex] = evaluationSets[idx];
+                        evaluationSets[idx] = temp;
+                        currentSetIndex = idx;
+                        renderAll();
+                    }
+                });
+                
+                container.appendChild(tab);
+            });
+
+            const addBtn = document.createElement('button');
+            addBtn.innerHTML = '➕ 평가 세트 추가';
+            addBtn.onclick = addEvaluationSet;
+            container.appendChild(addBtn);
+        }
+
+        function renderMetadata() {
+            const set = getCurrentSet();
+            document.getElementById('evaluatorName').value = set.evaluatorName;
+            document.getElementById('evaluatorName').onchange = (e) => {
+                updateCurrentSet('evaluatorName', e.target.value);
+            };
+            document.getElementById('evaluationDate').value = set.evaluationDate;
+            document.getElementById('evaluationDate').onchange = (e) => {
+                updateCurrentSet('evaluationDate', e.target.value);
+            };
+            document.getElementById('departmentSelect').value = set.department;
+            document.getElementById('departmentSelect').onchange = (e) => {
+                changeTemplate(e.target.value);
+            };
+        }
+
+        function renderCandidates() {
+            const set = getCurrentSet();
+            const grid = document.getElementById('candidatesGrid');
+            grid.innerHTML = '';
+            
+            set.candidates.forEach((cand, idx) => {
+                const card = document.createElement('div');
+                card.className = 'candidate-card';
+                card.innerHTML = `
+                    <div>
+                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">이름</label>
+                        <input type="text" value="${cand.name}" onchange="getCurrentSet().candidates[${idx}].name = this.value; renderAll();">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">회사</label>
+                        <input type="text" value="${cand.company}" onchange="getCurrentSet().candidates[${idx}].company = this.value; renderAll();">
+                    </div>
+                    <div class="candidate-card-buttons">
+                        <button onclick="removeCandidate(${idx})" style="padding: 6px 8px; justify-content: center;">🗑️ 삭제</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderItems() {
+            const set = getCurrentSet();
+            const tbody = document.getElementById('itemsTable');
+            tbody.innerHTML = '';
+            set.items.forEach((item, idx) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="min-width: 120px;">
+                        <input type="text" class="score-input" value="${item.name}" onchange="getCurrentSet().items[${idx}].name = this.value; saveState();">
+                    </td>
+                    <td style="min-width: 180px;">
+                        <input type="text" class="score-input" value="${item.detail}" onchange="getCurrentSet().items[${idx}].detail = this.value; saveState();">
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; align-items: center; gap: 4px; justify-content: center;">
+                            <input type="number" class="score-input" value="${(item.weight * 100).toFixed(0)}" step="1" min="0" max="100" onchange="getCurrentSet().items[${idx}].weight = parseFloat(this.value) / 100; updateTotalWeight(); renderAll();" style="width: 50px;">
+                            <span style="font-size: 12px; color: var(--text-secondary);">%</span>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <button onclick="deleteItem(${idx})" style="width: 40px; padding: 4px 8px; justify-content: center;">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            updateTotalWeight();
+        }
+
+        function updateTotalWeight() {
+            const set = getCurrentSet();
+            const total = set.items.reduce((sum, item) => sum + item.weight, 0);
+            const percentage = (total * 100).toFixed(0);
+            document.getElementById('totalWeight').textContent = percentage + '%';
+        }
+
+        function calculateScore(candidateIdx) {
+            const set = getCurrentSet();
+            let total = 0;
+            let weightSum = 0;
+            set.items.forEach((item, idx) => {
+                total += set.candidates[candidateIdx].scores[idx] * item.weight;
+                weightSum += item.weight;
+            });
+            return weightSum > 0 ? (total / weightSum).toFixed(2) : '0.00';
+        }
+
+        function renderCandidateTable() {
+            const set = getCurrentSet();
+            
+            // 테이블 헤더
+            const headerCell = document.getElementById('candTableHeaders');
+            let headerHtml = '';
+            set.candidates.forEach((cand) => {
+                headerHtml += `<th style="min-width: 100px; text-align: center;"><div style="font-weight: 500; font-size: 13px;">${cand.name}</div><div style="font-size: 11px; color: var(--text-secondary);">${cand.company}</div></th>`;
+            });
+            headerCell.innerHTML = headerHtml;
+
+            // 평가 테이블
+            const tbody = document.getElementById('candidateTable');
+            tbody.innerHTML = '';
+            set.items.forEach((item, itemIdx) => {
+                const row = document.createElement('tr');
+                let html = `<td class="sticky-col" style="font-weight: 500; font-size: 12px;">${item.name}</td>`;
+                
+                set.candidates.forEach((cand, candIdx) => {
+                    const score = cand.scores[itemIdx] || 0;
+                    const comment = cand.comments[itemIdx] || '';
+                    html += `
+                        <td style="min-width: 100px;">
+                            <div class="score-group">
+                                <div style="display: flex; align-items: center; gap: 4px; justify-content: center;">
+                                    <input type="number" class="score-input" value="${score}" min="0" max="5" onchange="getCurrentSet().candidates[${candIdx}].scores[${itemIdx}] = parseInt(this.value); renderAll();" style="width: 40px;">
+                                    <span style="font-size: 11px; color: var(--text-secondary);">/ 5</span>
+                                </div>
+                                <input type="text" class="score-input comment-input" value="${comment}" placeholder="코멘트" onchange="getCurrentSet().candidates[${candIdx}].comments[${itemIdx}] = this.value; saveState();">
+                            </div>
+                        </td>
+                    `;
+                });
+                row.innerHTML = html;
+                tbody.appendChild(row);
+            });
+
+            // 종합점수 카드
+            const summary = document.getElementById('summaryCards');
+            summary.innerHTML = '';
+            set.candidates.forEach((cand, idx) => {
+                const score = calculateScore(idx);
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.innerHTML = `
+                    <div class="summary-card-name">${cand.name}</div>
+                    <div class="summary-card-score">${score}</div>
+                    <div class="summary-card-max">/ 5.0</div>
+                `;
+                summary.appendChild(card);
+            });
+        }
+
+        function downloadExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            evaluationSets.forEach((set, setIdx) => {
+                const headers = ['평가항목', '세부사항', '비중', '코멘트', ...set.candidates.map(c => c.name), ...set.candidates.map(c => `${c.name}_코멘트`)];
+                const data = set.items.map((item, itemIdx) => {
+                    const row = [item.name, item.detail, item.weight, item.comment];
+                    set.candidates.forEach(cand => row.push(cand.scores[itemIdx]));
+                    set.candidates.forEach(cand => row.push(cand.comments[itemIdx]));
+                    return row;
+                });
+                
+                // 종합점수 행
+                const summaryRow = ['종합점수', '', '', ''];
+                set.candidates.forEach((cand, idx) => summaryRow.push(calculateScore(idx)));
+                summaryRow.push(...Array(set.candidates.length).fill(''));
+                data.push(summaryRow);
+                
+                const sheetName = set.name.substring(0, 31);
+                const title = `${set.name}${set.evaluatorName ? ' - ' + set.evaluatorName : ''}${set.evaluationDate ? ' (' + set.evaluationDate + ')' : ''}`;
+                const ws = XLSX.utils.aoa_to_sheet([
+                    [title],
+                    [],
+                    headers,
+                    ...data
+                ]);
+                ws['!cols'] = [{wch: 15}, {wch: 20}, {wch: 8}, {wch: 15}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 15}, {wch: 15}, {wch: 15}];
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            });
+            
+            XLSX.writeFile(wb, '평가관리_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const wb = XLSX.read(event.target.result);
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                if (data.length > 0) {
+                    const set = getCurrentSet();
+                    set.items = data.filter(row => row['평가항목'] && row['평가항목'] !== '종합점수').map(row => ({
+                        name: row['평가항목'] || '',
+                        detail: row['세부사항'] || '',
+                        weight: parseFloat(row['비중']) || 0,
+                        comment: row['코멘트'] || ''
+                    }));
+                    renderAll();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        const STORAGE_KEY = 'evaluationSystemData';
+
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    evaluationSets: evaluationSets,
+                    currentSetIndex: currentSetIndex
+                }));
+            } catch (e) {
+                console.warn('자동 저장 실패:', e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const data = JSON.parse(raw);
+                if (data.evaluationSets && data.evaluationSets.length > 0) {
+                    evaluationSets = data.evaluationSets;
+                    currentSetIndex = data.currentSetIndex || 0;
+                    if (currentSetIndex >= evaluationSets.length) currentSetIndex = 0;
+                    return true;
+                }
+            } catch (e) {
+                console.warn('불러오기 실패:', e);
+            }
+            return false;
+        }
+
+        function renderAll() {
+            renderSetTabs();
+            renderMetadata();
+            renderCandidates();
+            renderItems();
+            renderCandidateTable();
+            saveState();
+        }
+
+        // 초기화
+        if (!loadState()) {
+            evaluationSets.push(initializeSet('planning'));
+        }
+        renderAll();
+
+        // 페이지 닫기/새로고침 직전 마지막 저장 (타이핑 중이던 값까지)
+        window.addEventListener('beforeunload', saveState);
+    </script>
+</body>
+</html>
